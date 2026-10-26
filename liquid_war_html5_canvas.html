@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Liquid War HTML5 - Édition Récréée</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 500: '#3b82f6', 600: '#2563eb' }
+          }
+        }
+      }
+    };
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      user-select: none;
+      -webkit-user-select: none;
+      background-color: #0f172a;
+      color: #f8fafc;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    canvas {
+      image-rendering: pixelated;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #1e293b;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+  <!-- Navigation Header -->
+  <header class="bg-slate-900 border-b border-slate-800 px-4 py-2.5 flex items-center justify-between shrink-0">
+    <div class="flex items-center space-x-3">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg">
+        <i class="fa-solid font-bold text-sm">LW</i>
+      </div>
+      <div>
+        <h1 class="font-bold text-lg leading-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-300">Liquid War HTML5</h1>
+        <p class="text-xs text-slate-400">Simulation de Fluides & Bataille de Particules</p>
+      </div>
+    </div>
+
+    <!-- Mode Selector Tabs -->
+    <div class="flex bg-slate-800 p-1 rounded-lg border border-slate-700/50">
+      <button id="tab-game" onclick="switchTab('game')" class="px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-150 bg-blue-600 text-white shadow-sm">
+        <i class="fa-solid fa-gamepad mr-1.5"></i> Jouer
+      </button>
+      <button id="tab-doc" onclick="switchTab('doc')" class="px-4 py-1.5 rounded-md text-sm font-medium text-slate-400 hover:text-slate-200 transition-all duration-150">
+        <i class="fa-solid fa-book-open mr-1.5"></i> Algorithmes & Doc
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Application Content -->
+  <main class="flex-1 relative overflow-hidden flex">
+    
+    <!-- GAME VIEW -->
+    <div id="view-game" class="w-full h-full flex flex-col lg:flex-row p-3 gap-3 overflow-hidden">
+      
+      <!-- Control Panel (Left Sidebar) -->
+      <div class="w-full lg:w-80 bg-slate-900/90 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shrink-0 overflow-y-auto custom-scrollbar">
+        <div class="space-y-4">
+          
+          <!-- Actions & Game Control -->
+          <div>
+            <h2 class="text-xs uppercase tracking-wider font-semibold text-slate-400 mb-2">Contrôles de la Partie</h2>
+            <div class="grid grid-cols-2 gap-2">
+              <button id="btn-restart" onclick="initGame()" class="bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 px-3 rounded-lg text-sm transition-colors flex items-center justify-center gap-1.5 shadow-md">
+                <i class="fa-solid fa-rotate-right text-xs"></i> Redémarrer
+              </button>
+              <button id="btn-pause" onclick="togglePause()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium py-2 px-3 rounded-lg text-sm transition-colors flex items-center justify-center gap-1.5">
+                <i id="icon-pause" class="fa-solid fa-pause text-xs"></i> <span id="txt-pause">Pause</span>
+              </button>
+            </div>
+          </div>
+
+          <hr class="border-slate-800">
+
+          <!-- Map Selection -->
+          <div>
+            <label class="block text-xs uppercase tracking-wider font-semibold text-slate-400 mb-1.5">Taille & Résolution</label>
+            <select id="select-size" onchange="initGame()" class="w-full bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none mb-3">
+              <option value="standard">Standard (160 x 120)</option>
+              <option value="large" selected>Grande HD (240 x 180 - Recommandé)</option>
+              <option value="huge">Giga Caverne (320 x 240 - Ultime)</option>
+            </select>
+
+            <label class="block text-xs uppercase tracking-wider font-semibold text-slate-400 mb-1.5">Choix de la Carte</label>
+            <select id="select-map" onchange="initGame()" class="w-full bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+              <option value="cavern">Grandes Cavernes Espacées (Salles Ouvertes & Larges Voies)</option>
+              <option value="arena">Arène Ouverte</option>
+              <option value="labyrinth">Labyrinthe Classique</option>
+            </select>
+          </div>
+
+          <!-- Parameters Sliders -->
+          <div class="space-y-3">
+            <h2 class="text-xs uppercase tracking-wider font-semibold text-slate-400">Réglages Physiques</h2>
+            
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-slate-300">Total Particules</span>
+                <span id="val-particles" class="font-mono text-blue-400 font-bold">6000</span>
+              </div>
+              <input type="range" id="slider-particles" min="1000" max="15000" step="500" value="6000" oninput="updateSlidersText()" onchange="initGame()" class="w-full accent-blue-500 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-slate-300">Puissance d'Attaque</span>
+                <span id="val-attack" class="font-mono text-red-400 font-bold">120</span>
+              </div>
+              <input type="range" id="slider-attack" min="30" max="300" step="10" value="120" oninput="updateSlidersText()" class="w-full accent-red-500 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-slate-300">Pression de Soin (Cure)</span>
+                <span id="val-cure" class="font-mono text-emerald-400 font-bold">150</span>
+              </div>
+              <input type="range" id="slider-cure" min="0" max="300" step="10" value="150" oninput="updateSlidersText()" class="w-full accent-emerald-500 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-slate-300">Santé Particule (HP)</span>
+                <span id="val-health" class="font-mono text-purple-400 font-bold">1000</span>
+              </div>
+              <input type="range" id="slider-health" min="300" max="2500" step="100" value="1000" oninput="updateSlidersText()" class="w-full accent-purple-500 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+            </div>
+          </div>
+
+          <hr class="border-slate-800">
+
+          <!-- Realtime Territory Stats -->
+          <div>
+            <h2 class="text-xs uppercase tracking-wider font-semibold text-slate-400 mb-2">Contrôle du Territoire</h2>
+            <div id="stats-bars" class="space-y-2">
+              <!-- Dynamically populated stats -->
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Controls Legend -->
+        <div class="mt-4 p-3 bg-slate-800/60 rounded-lg border border-slate-700/50 text-xs text-slate-400 space-y-1">
+          <p class="font-semibold text-slate-300 flex items-center gap-1.5"><i class="fa-solid fa-gamepad text-blue-400"></i> Joueur 1 (Bleu) :</p>
+          <p><span class="text-slate-200">Souris</span> : Déplace le curseur cible</p>
+          <p><span class="text-slate-200">Flèches / ZQSD</span> : Clavier alternatif</p>
+        </div>
+      </div>
+
+      <!-- Canvas Render Area -->
+      <div class="flex-1 bg-slate-950 border border-slate-800 rounded-xl relative flex items-center justify-center p-2 overflow-hidden shadow-inner">
+        <canvas id="gameCanvas" class="w-full h-full object-contain rounded-lg border border-slate-800/80 cursor-crosshair"></canvas>
+        
+        <!-- Victory Overlay Modal -->
+        <div id="victory-modal" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center text-center p-6 z-20">
+          <div class="bg-slate-900 border border-slate-700 p-8 rounded-2xl max-w-md w-full shadow-2xl">
+            <div id="victory-icon" class="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center text-3xl text-white shadow-lg">
+              <i class="fa-solid fa-trophy"></i>
+            </div>
+            <h2 id="victory-title" class="text-2xl font-bold text-white mb-2">Victoire Absolue !</h2>
+            <p id="victory-desc" class="text-slate-300 text-sm mb-6">L'équipe a totalement assimilé le fluide adverse.</p>
+            <button onclick="initGame()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-xl text-sm transition-all shadow-lg hover:shadow-blue-500/25">
+              Rejouer une partie
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- DOCUMENTATION VIEW -->
+    <div id="view-doc" class="hidden w-full h-full p-6 overflow-y-auto custom-scrollbar bg-slate-900/50">
+      <div class="max-w-4xl mx-auto space-y-8 text-slate-300">
+        <div>
+          <h2 class="text-2xl font-bold text-white mb-2 border-b border-slate-800 pb-2">Architecture & Algorithmes de Liquid War</h2>
+          <p class="text-slate-400">Analyse technique des algorithmes originaux du jeu vidéo créés par Thomas Colcombet et Christian Mauduit.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl space-y-3">
+            <div class="text-blue-400 font-bold text-lg flex items-center gap-2">
+              <i class="fa-solid fa-wave-square"></i> 1. Champ de Distance Euclidean Dijkstra
+            </div>
+            <p class="text-sm text-slate-400 leading-relaxed">
+              Pour diriger des milliers de particules sans calcul complexe par particule, chaque curseur projette un champ d'onde BFS sur la grille. Le calcul utilise des coûts euclidiens (10 cardinal, 14 diagonal) garantissant une forme de bulle parfaitement ronde autour du curseur.
+            </p>
+          </div>
+
+          <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl space-y-3">
+            <div class="text-emerald-400 font-bold text-lg flex items-center gap-2">
+              <i class="fa-solid fa-dungeon"></i> 2. Génération de Salles Espacées & Tunnels Larges
+            </div>
+            <p class="text-sm text-slate-400 leading-relaxed">
+              Génération procédurale de vastes chambres interconnectées : placement de grandes salles organiques, liaison par Arbre Couvrant Minimal (MST - Prim) pour assurer une connectivité totale à 100%, et creusement de larges boulevards fluides pour batailles de grande échelle.
+            </p>
+          </div>
+
+          <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl space-y-3">
+            <div class="text-purple-400 font-bold text-lg flex items-center gap-2">
+              <i class="fa-solid fa-hand-holding-medical"></i> 3. Mécanique de "Cure" (Soin Arrière)
+            </div>
+            <p class="text-sm text-slate-400 leading-relaxed">
+              Lorsqu'un combattant pousse vers un coéquipier bloqué en première ligne, il transmet sa force sous forme de régénération de santé. La 1ère ligne devient quasi-invincible si elle est poussée par une grande réserve arrière.
+            </p>
+          </div>
+
+          <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl space-y-3">
+            <div class="text-red-400 font-bold text-lg flex items-center gap-2">
+              <i class="fa-solid fa-skull-crossbones"></i> 4. Conversion & Effets Visuels
+            </div>
+            <p class="text-sm text-slate-400 leading-relaxed">
+              Les dégâts subis dépendent du nombre d'ennemis adjacents. À 0 HP, la particule est convertie à la couleur de l'attaquant et recharge ses HP à 100%. Les particules sous attaque blanchissent sous l'effet du conflit.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    // Dynamic Grid Dimensions
+    let GRID_W = 240;
+    let GRID_H = 180;
+    const NUM_TEAMS = 4;
+
+    const TEAM_COLORS = [
+      { name: 'Joueur (Bleu)', hex: '#3b82f6', rgb: [59, 130, 246] },
+      { name: 'Bot Rouge',    hex: '#ef4444', rgb: [239, 68, 68] },
+      { name: 'Bot Vert',     hex: '#10b981', rgb: [16, 185, 129] },
+      { name: 'Bot Jaune',    hex: '#f59e0b', rgb: [245, 158, 11] }
+    ];
+
+    // Canvas & Game State variables
+    let canvas, ctx;
+    let isPaused = false;
+    let totalParticles = 6000;
+    let isGameOver = false;
+
+    // Simulation Data Structures
+    let walls = new Uint8Array(GRID_W * GRID_H);
+    let cellGrid = new Int32Array(GRID_W * GRID_H);
+    let distGrids = Array.from({ length: NUM_TEAMS }, function() { return new Uint16Array(GRID_W * GRID_H); });
+    let heap = new Uint32Array(GRID_W * GRID_H);
+    let heapSize = 0;
+
+    function resizeGridBuffers(w, h) {
+      GRID_W = w;
+      GRID_H = h;
+      walls = new Uint8Array(GRID_W * GRID_H);
+      cellGrid = new Int32Array(GRID_W * GRID_H);
+      distGrids = Array.from({ length: NUM_TEAMS }, function() { return new Uint16Array(GRID_W * GRID_H); });
+      heap = new Uint32Array(GRID_W * GRID_H);
+      
+      if (canvas) {
+        canvas.width = GRID_W * 4;
+        canvas.height = GRID_H * 4;
+      }
+    }
+
+    function pushHeap(cell, grid) {
+      let i = heapSize++;
+      heap[i] = cell;
+      while (i > 0) {
+        let p = (i - 1) >> 1;
+        if (grid[heap[p]] <= grid[heap[i]]) break;
+        let tmp = heap[p]; heap[p] = heap[i]; heap[i] = tmp;
+        i = p;
+      }
+    }
+
+    function popHeap(grid) {
+      if (heapSize === 0) return -1;
+      let top = heap[0];
+      heapSize--;
+      if (heapSize > 0) {
+        heap[0] = heap[heapSize];
+        let i = 0;
+        while (true) {
+          let left = (i << 1) + 1;
+          let right = left + 1;
+          let smallest = i;
+          if (left < heapSize && grid[heap[left]] < grid[heap[smallest]]) smallest = left;
+          if (right < heapSize && grid[heap[right]] < grid[heap[smallest]]) smallest = right;
+          if (smallest === i) break;
+          let tmp = heap[i]; heap[i] = heap[smallest]; heap[smallest] = tmp;
+          i = smallest;
+        }
+      }
+      return top;
+    }
+
+    // Dynamic Cursors & Inputs
+    let cursors = [
+      { x: 25, y: 25 },
+      { x: GRID_W - 25, y: 25 },
+      { x: 25, y: GRID_H - 25 },
+      { x: GRID_W - 25, y: GRID_H - 25 }
+    ];
+
+    const keyState = { Up: false, Down: false, Left: false, Right: false };
+
+    // Particles Data Structure
+    let particles = [];
+
+    class Particle {
+      constructor(x, y, team) {
+        this.x = x;
+        this.y = y;
+        this.team = team;
+        this.hp = parseInt(document.getElementById('slider-health').value || 1000);
+        this.flash = 0;
+      }
+    }
+
+    function buildMap(type) {
+      walls.fill(1);
+
+      function setWallBorder() {
+        for (let x = 0; x < GRID_W; x++) {
+          walls[x] = 1;
+          walls[(GRID_H - 1) * GRID_W + x] = 1;
+        }
+        for (let y = 0; y < GRID_H; y++) {
+          walls[y * GRID_W] = 1;
+          walls[y * GRID_W + (GRID_W - 1)] = 1;
+        }
+      }
+
+      if (type === 'cavern') {
+        const scale = GRID_W / 160;
+        const cornerOffset = Math.floor(25 * scale);
+
+        // 1. Mandatory corner rooms for clean team spawns with balanced room radii
+        const rooms = [
+          { x: cornerOffset, y: cornerOffset, r: Math.floor((13 + Math.random() * 3) * scale) },
+          { x: GRID_W - cornerOffset, y: cornerOffset, r: Math.floor((13 + Math.random() * 3) * scale) },
+          { x: cornerOffset, y: GRID_H - cornerOffset, r: Math.floor((13 + Math.random() * 3) * scale) },
+          { x: GRID_W - cornerOffset, y: GRID_H - cornerOffset, r: Math.floor((13 + Math.random() * 3) * scale) },
+          // Central arena room (slightly larger main room)
+          { x: GRID_W / 2 + (Math.random() - 0.5) * 20 * scale, y: GRID_H / 2 + (Math.random() - 0.5) * 15 * scale, r: Math.floor((17 + Math.random() * 4) * scale) }
+        ];
+
+        // 2. Add 6 to 9 additional organic rooms with distinct cavern spacing
+        const numExtraRooms = 6 + Math.floor(Math.random() * 4);
+        for (let i = 0; i < numExtraRooms; i++) {
+          const rx = Math.floor((0.18 + Math.random() * 0.64) * GRID_W);
+          const ry = Math.floor((0.18 + Math.random() * 0.64) * GRID_H);
+          const rr = Math.floor((10 + Math.random() * 5) * scale); // Adjusted chamber sizes
+          
+          let tooClose = false;
+          for (let r = 0; r < rooms.length; r++) {
+            if (Math.hypot(rx - rooms[r].x, ry - rooms[r].y) < 22 * scale) {
+              tooClose = true;
+              break;
+            }
+          }
+          if (!tooClose) {
+            rooms.push({ x: rx, y: ry, r: rr, seed: Math.random() * 100 });
+          }
+        }
+
+        rooms.forEach(function(rm) {
+          const roomSeed = rm.seed || Math.random() * 100;
+          const maxR = rm.r + 5;
+          for (let dy = -maxR; dy <= maxR; dy++) {
+            for (let dx = -maxR; dx <= maxR; dx++) {
+              const cx = Math.floor(rm.x + dx);
+              const cy = Math.floor(rm.y + dy);
+              if (cx > 2 && cx < GRID_W - 3 && cy > 2 && cy < GRID_H - 3) {
+                const angle = Math.atan2(dy, dx);
+                // Organic radial deformation with randomized seed
+                const noise = Math.sin(angle * 3 + roomSeed) * 2.5 + Math.cos(angle * 2 + roomSeed) * 1.5;
+                const effectiveR = rm.r + noise;
+                if (dx * dx + dy * dy <= effectiveR * effectiveR) {
+                  walls[cy * GRID_W + cx] = 0;
+                }
+              }
+            }
+          }
+        });
+
+        const numRooms = rooms.length;
+        const inMST = new Array(numRooms).fill(false);
+        const edges = [];
+        inMST[0] = true;
+        let connectedCount = 1;
+
+        while (connectedCount < numRooms) {
+          let minDist = Infinity;
+          let bestA = -1, bestB = -1;
+
+          for (let a = 0; a < numRooms; a++) {
+            if (!inMST[a]) continue;
+            for (let b = 0; b < numRooms; b++) {
+              if (inMST[b]) continue;
+              const dist = Math.hypot(rooms[a].x - rooms[b].x, rooms[a].y - rooms[b].y);
+              if (dist < minDist) {
+                minDist = dist;
+                bestA = a;
+                bestB = b;
+              }
+            }
+          }
+
+          if (bestB !== -1) {
+            inMST[bestB] = true;
+            edges.push([bestA, bestB]);
+            connectedCount++;
+          }
+        }
+
+        // Add 45% random extra loop edges for strategic tactical multi-paths
+        for (let a = 0; a < numRooms; a++) {
+          for (let b = a + 1; b < numRooms; b++) {
+            const dist = Math.hypot(rooms[a].x - rooms[b].x, rooms[a].y - rooms[b].y);
+            if (dist < 110 * scale && Math.random() < 0.45) {
+              edges.push([a, b]);
+            }
+          }
+        }
+
+        function carveCorridor(r1, r2) {
+          let cx = r1.x;
+          let cy = r1.y;
+          const targetX = r2.x;
+          const targetY = r2.y;
+
+          let steps = 0;
+          const maxSteps = 350;
+          const wobbleFreq = 0.08 + Math.random() * 0.1;
+          const wobbleAmp = 0.2 + Math.random() * 0.25;
+
+          while (Math.hypot(cx - targetX, cy - targetY) > 4 && steps++ < maxSteps) {
+            const directAngle = Math.atan2(targetY - cy, targetX - cx);
+            const wobble = Math.sin(steps * wobbleFreq) * wobbleAmp;
+            const angle = directAngle + wobble;
+
+            cx += Math.cos(angle) * 2.0;
+            cy += Math.sin(angle) * 2.0;
+
+            const ix = Math.floor(cx);
+            const iy = Math.floor(cy);
+
+            // Corridor radius (4.0 to 5.0 cells) for clearly defined, distinct connecting tunnels
+            const radius = (4.0 + Math.random() * 1.0) * scale;
+            const iradius = Math.ceil(radius + 1);
+            for (let ty = -iradius; ty <= iradius; ty++) {
+              for (let tx = -iradius; tx <= iradius; tx++) {
+                if (tx * tx + ty * ty <= radius * radius) {
+                  const wx = Math.max(2, Math.min(GRID_W - 3, ix + tx));
+                  const wy = Math.max(2, Math.min(GRID_H - 3, iy + ty));
+                  walls[wy * GRID_W + wx] = 0;
+                }
+              }
+            }
+          }
+        }
+
+        edges.forEach(function(edge) { carveCorridor(rooms[edge[0]], rooms[edge[1]]); });
+
+        const tempWalls = new Uint8Array(walls);
+        for (let y = 3; y < GRID_H - 3; y++) {
+          for (let x = 3; x < GRID_W - 3; x++) {
+            let neighborWalls = 0;
+            for (let dy = -1; dy <= 1; dy++) {
+              for (let dx = -1; dx <= 1; dx++) {
+                if (tempWalls[(y + dy) * GRID_W + (x + dx)]) neighborWalls++;
+              }
+            }
+            if (neighborWalls >= 7) walls[y * GRID_W + x] = 1;
+            else if (neighborWalls <= 2) walls[y * GRID_W + x] = 0;
+          }
+        }
+
+      } else if (type === 'arena') {
+        walls.fill(0);
+      } else if (type === 'labyrinth') {
+        walls.fill(0);
+        const stepY = Math.floor(18 * (GRID_H / 120));
+        const stepX = Math.floor(25 * (GRID_W / 160));
+        for (let y = 15; y < GRID_H - 15; y += stepY) {
+          for (let x = 15; x < GRID_W - 15; x++) {
+            if ((x % 30) < 22) walls[y * GRID_W + x] = 1;
+          }
+        }
+        for (let x = 20; x < GRID_W - 20; x += stepX) {
+          for (let y = 10; y < GRID_H - 10; y++) {
+            if ((y % 25) < 18) walls[y * GRID_W + x] = 1;
+          }
+        }
+      }
+
+      setWallBorder();
+    }
+
+    function computeDistanceGrid(team, targetX, targetY) {
+      const grid = distGrids[team];
+      grid.fill(65535);
+
+      const tx = Math.floor(Math.max(0, Math.min(GRID_W - 1, targetX)));
+      const ty = Math.floor(Math.max(0, Math.min(GRID_H - 1, targetY)));
+
+      let startIdx = ty * GRID_W + tx;
+      if (walls[startIdx]) {
+        for (let r = 1; r < 12; r++) {
+          let found = false;
+          for (let dy = -r; dy <= r && !found; dy++) {
+            for (let dx = -r; dx <= r && !found; dx++) {
+              const nx = tx + dx;
+              const ny = ty + dy;
+              if (nx >= 0 && nx < GRID_W && ny >= 0 && ny < GRID_H) {
+                const nIdx = ny * GRID_W + nx;
+                if (!walls[nIdx]) {
+                  startIdx = nIdx;
+                  found = true;
+                }
+              }
+            }
+          }
+          if (found) break;
+        }
+      }
+
+      grid[startIdx] = 0;
+      heapSize = 0;
+      pushHeap(startIdx, grid);
+
+      const dxDir = [1, -1, 0, 0, 1, -1, 1, -1];
+      const dyDir = [0, 0, 1, -1, 1, 1, -1, -1];
+      const costDir = [10, 10, 10, 10, 14, 14, 14, 14];
+
+      while (heapSize > 0) {
+        const curr = popHeap(grid);
+        const currentDist = grid[curr];
+        const cx = curr % GRID_W;
+        const cy = Math.floor(curr / GRID_W);
+
+        for (let i = 0; i < 8; i++) {
+          const nx = cx + dxDir[i];
+          const ny = cy + dyDir[i];
+
+          if (nx >= 0 && nx < GRID_W && ny >= 0 && ny < GRID_H) {
+            const nIdx = ny * GRID_W + nx;
+            if (!walls[nIdx]) {
+              if (i >= 4 && walls[cy * GRID_W + nx] && walls[ny * GRID_W + cx]) {
+                continue;
+              }
+              const newD = currentDist + costDir[i];
+              if (grid[nIdx] > newD) {
+                grid[nIdx] = newD;
+                pushHeap(nIdx, grid);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    function updateBots() {
+      for (let b = 1; b < NUM_TEAMS; b++) {
+        let enemyX = 0, enemyY = 0, enemyCount = 0;
+
+        particles.forEach(function(p) {
+          if (p.team !== b) {
+            enemyX += p.x;
+            enemyY += p.y;
+            enemyCount++;
+          }
+        });
+
+        if (enemyCount > 0) {
+          const targetX = enemyX / enemyCount;
+          const targetY = enemyY / enemyCount;
+
+          const dx = targetX - cursors[b].x;
+          const dy = targetY - cursors[b].y;
+          const dist = Math.hypot(dx, dy);
+
+          if (dist > 1) {
+            cursors[b].x += (dx / dist) * 1.2;
+            cursors[b].y += (dy / dist) * 1.2;
+          }
+        }
+      }
+    }
+
+    function updateParticles() {
+      cellGrid.fill(-1);
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        cellGrid[p.y * GRID_W + p.x] = i;
+      }
+
+      const attackPower = parseInt(document.getElementById('slider-attack').value || 120);
+      const curePower = parseInt(document.getElementById('slider-cure').value || 150);
+      const maxHp = parseInt(document.getElementById('slider-health').value || 1000);
+
+      const dxDir = [0, 0, 1, -1, 1, -1, 1, -1];
+      const dyDir = [1, -1, 0, 0, 1, 1, -1, -1];
+
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        const distGrid = distGrids[p.team];
+        const currIdx = p.y * GRID_W + p.x;
+
+        if (p.flash > 0) p.flash -= 0.15;
+
+        let options = [];
+        for (let d = 0; d < 8; d++) {
+          const nx = p.x + dxDir[d];
+          const ny = p.y + dyDir[d];
+
+          if (nx >= 0 && nx < GRID_W && ny >= 0 && ny < GRID_H) {
+            const nIdx = ny * GRID_W + nx;
+            if (!walls[nIdx]) {
+              const dVal = distGrid[nIdx];
+              options.push({ dir: d, nx: nx, ny: ny, nIdx: nIdx, dist: dVal });
+            }
+          }
+        }
+
+        options.sort(function(a, b) { return a.dist - b.dist; });
+
+        for (let j = 0; j < options.length; j++) {
+          const opt = options[j];
+          const occupantIdx = cellGrid[opt.nIdx];
+
+          if (occupantIdx === -1) {
+            cellGrid[currIdx] = -1;
+            p.x = opt.nx;
+            p.y = opt.ny;
+            cellGrid[opt.nIdx] = i;
+            break;
+          } else {
+            const other = particles[occupantIdx];
+            if (other.team !== p.team) {
+              other.hp -= attackPower;
+              other.flash = 1.0;
+              if (other.hp <= 0) {
+                other.team = p.team;
+                other.hp = maxHp;
+              }
+              break;
+            } else if (other.hp < maxHp) {
+              other.hp = Math.min(maxHp, other.hp + curePower);
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    function render() {
+      if (!ctx || !canvas) return;
+
+      ctx.fillStyle = '#090d16';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const cellW = canvas.width / GRID_W;
+      const cellH = canvas.height / GRID_H;
+
+      // Draw Walls
+      ctx.fillStyle = '#334155';
+      for (let y = 0; y < GRID_H; y++) {
+        for (let x = 0; x < GRID_W; x++) {
+          if (walls[y * GRID_W + x]) {
+            ctx.fillRect(x * cellW, y * cellH, cellW + 0.5, cellH + 0.5);
+          }
+        }
+      }
+
+      // Draw Particles
+      const teamCounts = [0, 0, 0, 0];
+
+      particles.forEach(function(p) {
+        teamCounts[p.team]++;
+        const rgb = TEAM_COLORS[p.team].rgb;
+
+        let r = rgb[0];
+        let g = rgb[1];
+        let b = rgb[2];
+
+        if (p.flash > 0) {
+          r = Math.min(255, r + p.flash * 180);
+          g = Math.min(255, g + p.flash * 180);
+          b = Math.min(255, b + p.flash * 180);
+        }
+
+        ctx.fillStyle = `rgb(${Math.floor(r)},${Math.floor(g)},${Math.floor(b)})`;
+        ctx.fillRect(p.x * cellW, p.y * cellH, cellW + 0.5, cellH + 0.5);
+      });
+
+      // Draw Cursors
+      cursors.forEach(function(c, idx) {
+        if (teamCounts[idx] > 0) {
+          const cx = c.x * cellW;
+          const cy = c.y * cellH;
+
+          ctx.strokeStyle = TEAM_COLORS[idx].hex;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+          ctx.stroke();
+
+          ctx.fillStyle = TEAM_COLORS[idx].hex;
+          ctx.beginPath();
+          ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+
+      updateStatsUI(teamCounts);
+      checkVictory(teamCounts);
+    }
+
+    function updateStatsUI(teamCounts) {
+      const total = particles.length || 1;
+      const statsContainer = document.getElementById('stats-bars');
+      if (!statsContainer) return;
+      statsContainer.innerHTML = '';
+
+      teamCounts.forEach(function(count, idx) {
+        const pct = ((count / total) * 100).toFixed(1);
+        const html = `
+          <div>
+            <div class="flex justify-between text-xs mb-0.5">
+              <span class="font-medium text-slate-300">${TEAM_COLORS[idx].name}</span>
+              <span class="font-mono text-slate-400">${pct}%</span>
+            </div>
+            <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+              <div class="h-full rounded-full transition-all duration-300" style="width: ${pct}%; background-color: ${TEAM_COLORS[idx].hex}"></div>
+            </div>
+          </div>
+        `;
+        statsContainer.insertAdjacentHTML('beforeend', html);
+      });
+    }
+
+    function checkVictory(teamCounts) {
+      if (isGameOver) return;
+      const activeTeams = teamCounts.filter(function(c) { return c > 0; });
+      
+      if (activeTeams.length === 1 && particles.length > 0) {
+        const winnerIdx = teamCounts.findIndex(function(c) { return c > 0; });
+        isGameOver = true;
+
+        const modal = document.getElementById('victory-modal');
+        const title = document.getElementById('victory-title');
+        const desc = document.getElementById('victory-desc');
+        const icon = document.getElementById('victory-icon');
+
+        if (modal && title && desc && icon) {
+          icon.style.backgroundColor = TEAM_COLORS[winnerIdx].hex;
+          title.innerText = `Victoire : ${TEAM_COLORS[winnerIdx].name} !`;
+          desc.innerText = `Toutes les particules adverses ont été totalement assimilées.`;
+          modal.classList.remove('hidden');
+        }
+      }
+    }
+
+    function gameLoop() {
+      if (!isPaused && !isGameOver) {
+        const speed = 1.8;
+        if (keyState.Up) cursors[0].y = Math.max(2, cursors[0].y - speed);
+        if (keyState.Down) cursors[0].y = Math.min(GRID_H - 3, cursors[0].y + speed);
+        if (keyState.Left) cursors[0].x = Math.max(2, cursors[0].x - speed);
+        if (keyState.Right) cursors[0].x = Math.min(GRID_W - 3, cursors[0].x + speed);
+
+        updateBots();
+
+        for (let t = 0; t < NUM_TEAMS; t++) {
+          computeDistanceGrid(t, cursors[t].x, cursors[t].y);
+        }
+
+        updateParticles();
+      }
+
+      render();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function initGame() {
+      isGameOver = false;
+      const modal = document.getElementById('victory-modal');
+      if (modal) modal.classList.add('hidden');
+
+      const sizeOption = document.getElementById('select-size').value;
+      if (sizeOption === 'huge') {
+        resizeGridBuffers(320, 240);
+      } else if (sizeOption === 'large') {
+        resizeGridBuffers(240, 180);
+      } else {
+        resizeGridBuffers(160, 120);
+      }
+
+      const mapType = document.getElementById('select-map').value;
+      buildMap(mapType);
+
+      totalParticles = parseInt(document.getElementById('slider-particles').value || 6000);
+      particles = [];
+
+      const scale = GRID_W / 160;
+      const spawnOffset = Math.floor(25 * scale);
+
+      const spawns = [
+        { x: spawnOffset, y: spawnOffset },
+        { x: GRID_W - spawnOffset, y: spawnOffset },
+        { x: spawnOffset, y: GRID_H - spawnOffset },
+        { x: GRID_W - spawnOffset, y: GRID_H - spawnOffset }
+      ];
+
+      cursors = [
+        { x: spawns[0].x, y: spawns[0].y },
+        { x: spawns[1].x, y: spawns[1].y },
+        { x: spawns[2].x, y: spawns[2].y },
+        { x: spawns[3].x, y: spawns[3].y }
+      ];
+
+      const perTeam = Math.floor(totalParticles / NUM_TEAMS);
+      spawns.forEach(function(sp, team) {
+        let added = 0;
+        let radius = 1;
+        while (added < perTeam && radius < 70) {
+          for (let dy = -radius; dy <= radius && added < perTeam; dy++) {
+            for (let dx = -radius; dx <= radius && added < perTeam; dx++) {
+              const px = sp.x + dx;
+              const py = sp.y + dy;
+              if (px > 0 && px < GRID_W - 1 && py > 0 && py < GRID_H - 1) {
+                if (!walls[py * GRID_W + px]) {
+                  particles.push(new Particle(px, py, team));
+                  added++;
+                }
+              }
+            }
+          }
+          radius++;
+        }
+      });
+
+      updateSlidersText();
+    }
+
+    function togglePause() {
+      isPaused = !isPaused;
+      document.getElementById('txt-pause').innerText = isPaused ? 'Reprendre' : 'Pause';
+      document.getElementById('icon-pause').className = isPaused ? 'fa-solid fa-play text-xs' : 'fa-solid fa-pause text-xs';
+    }
+
+    function switchTab(tab) {
+      const viewGame = document.getElementById('view-game');
+      const viewDoc = document.getElementById('view-doc');
+      const tabGame = document.getElementById('tab-game');
+      const tabDoc = document.getElementById('tab-doc');
+
+      if (tab === 'game') {
+        viewGame.classList.remove('hidden');
+        viewDoc.classList.add('hidden');
+        tabGame.className = 'px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-150 bg-blue-600 text-white shadow-sm';
+        tabDoc.className = 'px-4 py-1.5 rounded-md text-sm font-medium text-slate-400 hover:text-slate-200 transition-all duration-150';
+      } else {
+        viewGame.classList.add('hidden');
+        viewDoc.classList.remove('hidden');
+        tabDoc.className = 'px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-150 bg-blue-600 text-white shadow-sm';
+        tabGame.className = 'px-4 py-1.5 rounded-md text-sm font-medium text-slate-400 hover:text-slate-200 transition-all duration-150';
+      }
+    }
+
+    function updateSlidersText() {
+      const elP = document.getElementById('slider-particles');
+      const elA = document.getElementById('slider-attack');
+      const elC = document.getElementById('slider-cure');
+      const elH = document.getElementById('slider-health');
+
+      if (elP) document.getElementById('val-particles').innerText = elP.value;
+      if (elA) document.getElementById('val-attack').innerText = elA.value;
+      if (elC) document.getElementById('val-cure').innerText = elC.value;
+      if (elH) document.getElementById('val-health').innerText = elH.value;
+    }
+
+    window.onload = function () {
+      canvas = document.getElementById('gameCanvas');
+      ctx = canvas.getContext('2d');
+
+      canvas.addEventListener('mousemove', function(e) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = GRID_W / rect.width;
+        const scaleY = GRID_H / rect.height;
+        cursors[0].x = Math.max(2, Math.min(GRID_W - 3, (e.clientX - rect.left) * scaleX));
+        cursors[0].y = Math.max(2, Math.min(GRID_H - 3, (e.clientY - rect.top) * scaleY));
+      });
+
+      window.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowUp' || e.key === 'z' || e.key === 'Z') keyState.Up = true;
+        if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') keyState.Down = true;
+        if (e.key === 'ArrowLeft' || e.key === 'q' || e.key === 'Q') keyState.Left = true;
+        if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keyState.Right = true;
+      });
+
+      window.addEventListener('keyup', function(e) {
+        if (e.key === 'ArrowUp' || e.key === 'z' || e.key === 'Z') keyState.Up = false;
+        if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') keyState.Down = false;
+        if (e.key === 'ArrowLeft' || e.key === 'q' || e.key === 'Q') keyState.Left = false;
+        if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keyState.Right = false;
+      });
+
+      initGame();
+      gameLoop();
+    };
+  </script>
+</body>
+</html>
